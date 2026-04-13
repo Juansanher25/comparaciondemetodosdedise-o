@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Térmico de Intercambiadores de Calor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Roboto:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #F5F7FA;
+            color: #263238;
+        }
+        h1, h2, h3, h4, h5 {
+            font-family: 'Montserrat', sans-serif;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 40vh;
+            max-height: 400px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 4px solid #00BFA5;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1A237E 0%, #534BAE 100%);
+        }
+    </style>
+</head>
+<body class="antialiased pb-20">
+    <!--
+        PALETTE: "Energetic & Playful" / "Brilliant Blues & Vibrant Accents"
+        HEX Codes: #1A237E (Deep Blue), #534BAE (Light Blue), #00BFA5 (Teal), #FFC107 (Amber), #FF5252 (Coral), #F5F7FA (Light Gray), #FFFFFF (White), #263238 (Dark Gray).
+        
+        CONFIRMATION: NEITHER Mermaid JS NOR SVG were used anywhere in the output. All graphics use Canvas, WebGL, or pure HTML/CSS with standard Unicode characters.
+        
+        NARRATIVE PLAN:
+        1. Introduction/Hook: Overview of Heat Exchangers and the critical division between Tube side and Shell side dynamics.
+        2. Data Overview (Tube Side): Focus on constant area dynamics. Visualized with a 3D Plotly surface showing Dittus-Boelter behavior.
+        3. Key Trends & Analysis (Shell Side): The core conflict - Kern vs. Bell-Delaware. 
+        4. In-Depth Analysis: Visualizing Tinker's Flow Streams (Doughnut) and Bell-Delaware's J-Factors (Radar) to explain why the Shell side is complex.
+        5. Categorical Comparisons: Bar chart comparing the complexity and variables of Kern vs Bell-Delaware.
+        6. Process Flow: A structured HTML/CSS flow comparing the calculation steps.
+        
+        CHART SELECTION JUSTIFICATION (NO SVG):
+        - Tube Side Nu vs Re/Pr -> Goal: Relationships -> 3D Surface Plot (Plotly.js WebGL). Best for showing 3-variable continuous relationships.
+        - Method Complexity -> Goal: Compare -> Bar Chart (Chart.js Canvas). Perfect for side-by-side metric comparison across categories.
+        - Tinker Streams -> Goal: Composition -> Doughnut Chart (Chart.js Canvas). Ideal for showing parts of a whole (total shell flow).
+        - J-Factors -> Goal: Relationships/Organize -> Radar Chart (Chart.js Canvas). Excellent for visualizing multiple efficiency penalties simultaneously on a 0-1 scale.
+        - Process Flow -> Goal: Organize -> Structured HTML/CSS Diagram (Tailwind). Fulfills the requirement to show steps without using Mermaid JS or SVGs.
+    -->
+
+    <header class="gradient-bg text-white py-20 px-6 shadow-xl relative overflow-hidden">
+        <div class="absolute top-0 right-0 opacity-10 text-9xl transform translate-x-1/4 -translate-y-1/4">&#9881;</div>
+        <div class="max-w-7xl mx-auto relative z-10">
+            <h1 class="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight">Dinámica de Transferencia de Calor</h1>
+            <p class="text-xl md:text-2xl font-light max-w-3xl text-gray-200">Análisis comparativo de coeficientes convectivos: Lado Tubos vs. Lado Coraza, y la transición metodológica de Kern a Bell-Delaware.</p>
+        </div>
+    </header>
+
+    <nav class="sticky top-0 z-50 bg-white shadow-md border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-4 text-sm font-semibold text-gray-600">
+            <a href="#tubos" class="hover:text-[#00BFA5] transition-colors">&#128301; Lado Tubos</a>
+            <a href="#coraza" class="hover:text-[#00BFA5] transition-colors">&#127744; Lado Coraza</a>
+            <a href="#corrientes" class="hover:text-[#00BFA5] transition-colors">&#128202; Análisis de Corrientes</a>
+            <a href="#metodologias" class="hover:text-[#00BFA5] transition-colors">&#9874; Comparación de Métodos</a>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 mt-12 space-y-16">
+
+        <section id="tubos" class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+            <div class="xl:col-span-1 space-y-6">
+                <h2 class="text-3xl font-bold text-[#1A237E] border-b-4 border-[#FFC107] inline-block pb-2">1. Lado de los Tubos</h2>
+                <p class="text-gray-700 leading-relaxed text-lg">
+                    El flujo interno en los tubos se caracteriza por tener un <strong>área transversal constante</strong> ($A_c = \pi D_i^2 / 4$). Esto permite perfiles de velocidad estables y el uso de correlaciones directas que dependen fundamentalmente del Número de Reynolds (Re) y Prandtl (Pr).
+                </p>
+                <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-[#00BFA5]">
+                    <h3 class="text-xl font-bold mb-3 text-gray-800">&#128200; Correlación de Dittus-Boelter</h3>
+                    <p class="text-2xl font-mono text-center my-4 bg-gray-50 py-3 rounded-lg border text-[#1A237E]">Nu = 0.023 &middot; Re<sup>0.8</sup> &middot; Pr<sup>n</sup></p>
+                    <p class="text-sm text-gray-600">Para régimen turbulento (Re &ge; 10000). Utilizada cuando las propiedades del fluido no varían drásticamente con la temperatura.</p>
+                </div>
+            </div>
+            
+            <div class="xl:col-span-2 glass-card rounded-2xl shadow-lg p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Comportamiento del Número de Nusselt (Turbulento)</h3>
+                <p class="text-sm text-gray-500 mb-6">Relación tridimensional del calentamiento de fluido basado en la correlación de Dittus-Boelter (n=0.4).</p>
+                <div id="plotly-surface" class="w-full h-[500px]"></div>
+            </div>
+        </section>
+
+        <section id="coraza" class="pt-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-[#1A237E] border-b-4 border-[#FF5252] inline-block pb-2">2. Lado de la Coraza: Complejidad del Flujo Cruzado</h2>
+                <p class="text-gray-700 mt-6 max-w-3xl mx-auto text-lg">
+                    A diferencia de los tubos, el fluido en la coraza enfrenta deflectores (baffles) y haces de tubos, creando un <strong>área de flujo variable</strong>. Para evaluar la convección, la ingeniería utiliza dos enfoques principales: la aproximación global o la evaluación exhaustiva de corrientes.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <div class="bg-white rounded-2xl shadow-lg p-8 border-t-8 border-[#FFC107]">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="text-4xl">&#128269;</div>
+                        <h3 class="text-2xl font-bold text-gray-800">Método de Kern</h3>
+                    </div>
+                    <p class="text-gray-600 mb-6">Enfoque simplificado y conservador. Asume un flujo cruzado representativo calculado en el ecuador de la coraza.</p>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <span class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Ecuación Principal</span>
+                            <span class="block text-lg font-mono text-[#1A237E] mt-1">Nu = 0.36 &middot; Re<sub>e</sub><sup>0.55</sup> &middot; Pr<sup>1/3</sup> &middot; (&mu;/&mu;<sub>w</sub>)<sup>0.14</sup></span>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <span class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Área de Flujo Asumida</span>
+                            <span class="block text-lg font-mono text-[#1A237E] mt-1">A<sub>s</sub> = (D<sub>s</sub> &middot; C &middot; B) / P<sub>t</sub></span>
+                        </div>
+                    </div>
+                    <ul class="mt-6 space-y-2 text-sm text-gray-600">
+                        <li>&#10004; Ideal para diseño preliminar ("Tamaño de servilleta").</li>
+                        <li>&#10060; Ignora corrientes de fuga y derivaciones reales.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-8 border-t-8 border-[#00BFA5]">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="text-4xl">&#128187;</div>
+                        <h3 class="text-2xl font-bold text-gray-800">Método Bell-Delaware</h3>
+                    </div>
+                    <p class="text-gray-600 mb-6">El estándar industrial riguroso. Identifica y penaliza el flujo ideal con base en las holguras y fugas reales del equipo.</p>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <span class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Coeficiente Real</span>
+                            <span class="block text-lg font-mono text-[#1A237E] mt-1">h<sub>coraza</sub> = h<sub>ideal</sub> &middot; J<sub>c</sub> &middot; J<sub>l</sub> &middot; J<sub>b</sub> &middot; J<sub>s</sub> &middot; J<sub>r</sub></span>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <span class="block text-xs font-bold text-gray-500 uppercase tracking-wide">Caída de Presión</span>
+                            <span class="block text-sm font-mono text-[#1A237E] mt-1">&Delta;P<sub>c</sub> = [ (N<sub>b</sub>-1)&Delta;P<sub>b,i</sub> R<sub>b</sub> + N<sub>b</sub>&Delta;P<sub>w,i</sub> ] R<sub>l</sub> + ...</span>
+                        </div>
+                    </div>
+                    <ul class="mt-6 space-y-2 text-sm text-gray-600">
+                        <li>&#10004; Alta precisión (< 20% error vs real).</li>
+                        <li>&#10060; Alta complejidad computacional y geométrica.</li>
+                    </ul>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="corrientes" class="grid grid-cols-1 lg:grid-cols-2 gap-12 pt-8 items-center">
+            
+            <div class="space-y-6">
+                <h2 class="text-3xl font-bold text-[#1A237E]">3. Anatomía del Flujo: Modelo de Tinker</h2>
+                
+                <div class="bg-blue-50 border-l-4 border-[#1A237E] p-4 rounded-r-lg shadow-sm">
+                    <h4 class="font-bold text-[#1A237E] text-sm uppercase tracking-wide mb-1">¿Qué es el Modelo de Tinker?</h4>
+                    <p class="text-sm text-gray-700 leading-relaxed">Propuesto por Townsend Tinker en 1951, este modelo conceptual revolucionó el diseño térmico. Demostró que, debido a las holguras de fabricación necesarias para ensamblar un intercambiador (espacios entre el tubo y el deflector, o entre el deflector y la coraza), el fluido exterior no viaja como un bloque uniforme cruzando los tubos. En su lugar, el flujo se fractura en distintas "corrientes" de fuga y derivación. Comprender y cuantificar estas corrientes es la base matemática del método Bell-Delaware.</p>
+                </div>
+
+                <p class="text-gray-700">Como ilustra el gráfico inferior, solo una fracción del fluido (Corriente B) participa en el flujo cruzado ideal. El resto se escapa por tolerancias mecánicas generando <strong>corrientes parásitas</strong> que disminuyen drásticamente la eficiencia térmica global.</p>
+                
+                <div class="chart-container">
+                    <canvas id="tinkerChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-[#1A237E] text-white p-8 rounded-3xl shadow-2xl">
+                <h3 class="text-2xl font-bold mb-6 border-b border-white/20 pb-4">Desempeño Térmico y Factores J</h3>
+                <p class="text-blue-100 mb-8 text-sm">El coeficiente de película base ($h_{ideal}$) se castiga aplicando factores de corrección ($J_x < 1.0$) debido a las ineficiencias del flujo mostradas por el modelo de Tinker.</p>
+                
+                <div class="bg-white/10 p-4 rounded-xl">
+                    <div class="chart-container" style="height: 35vh;">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="metodologias" class="pt-8 mb-12">
+            <h2 class="text-3xl font-bold text-[#1A237E] text-center mb-12">4. Análisis Estructural: Kern vs Bell-Delaware</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-8 items-center mb-16">
+                <div class="md:col-span-2 chart-container">
+                    <canvas id="complexityChart"></canvas>
+                </div>
+                <div class="md:col-span-3">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Requerimientos Paramétricos</h3>
+                    <p class="text-gray-700 mb-6">
+                        La brecha de complejidad entre ambos métodos es sustancial. Mientras Kern requiere únicamente los diámetros, paso de tubos y espacio entre deflectores, Bell-Delaware exige un levantamiento milimétrico de las holguras de fabricación.
+                    </p>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                            <div class="w-12 h-12 rounded-full bg-[#FFC107] flex items-center justify-center text-white text-xl font-bold">K</div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Sensibilidad Geométrica: Baja</h4>
+                                <p class="text-sm text-gray-500">Incapaz de evaluar el impacto de desgastes o tolerancias holgadas.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                            <div class="w-12 h-12 rounded-full bg-[#00BFA5] flex items-center justify-center text-white text-xl font-bold">BD</div>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Sensibilidad Geométrica: Alta</h4>
+                                <p class="text-sm text-gray-500">Permite simulación rigurosa y diseño de "Sealing Strips" para optimización.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
+                <div class="bg-gray-800 text-white py-4 px-6 text-center font-bold tracking-widest uppercase text-sm">
+                    Diagrama de Flujo del Cálculo Analítico
+                </div>
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+                    
+                    <div class="flex flex-col space-y-4 relative">
+                        <h4 class="text-center font-bold text-[#FFC107] text-xl mb-4">Vía Kern</h4>
+                        
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-center z-10 shadow-sm">
+                            <span class="block font-bold">1. Geometría Global</span>
+                            <span class="text-xs text-gray-500">D<sub>s</sub>, d<sub>o</sub>, P<sub>t</sub>, B</span>
+                        </div>
+                        <div class="text-center text-2xl text-gray-300">&#8595;</div>
+                        
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-center z-10 shadow-sm">
+                            <span class="block font-bold">2. Área Ecuatorial & Velocidad</span>
+                            <span class="text-xs text-gray-500">A<sub>s</sub> &rarr; G<sub>s</sub></span>
+                        </div>
+                        <div class="text-center text-2xl text-gray-300">&#8595;</div>
+                        
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-center z-10 shadow-sm">
+                            <span class="block font-bold">3. Diámetro Equivalente</span>
+                            <span class="text-xs text-gray-500">D<sub>e</sub> (Cuadrado / Triangular)</span>
+                        </div>
+                        <div class="text-center text-2xl text-gray-300">&#8595;</div>
+                        
+                        <div class="bg-[#FFC107] p-4 rounded-lg text-center z-10 shadow-md text-gray-900">
+                            <span class="block font-bold">4. Correlación Directa</span>
+                            <span class="text-sm font-mono block mt-1">h<sub>o</sub> = f(Re<sub>e</sub>, Pr)</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col space-y-4 relative">
+                        <h4 class="text-center font-bold text-[#00BFA5] text-xl mb-4">Vía Bell-Delaware</h4>
+                        
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-center z-10 shadow-sm">
+                            <span class="block font-bold">1. Geometría + Tolerancias</span>
+                            <span class="text-xs text-gray-500">D<sub>s</sub>, d<sub>o</sub>, P<sub>t</sub>, L<sub>c</sub>, &delta;<sub>tb</sub>, &delta;<sub>sb</sub></span>
+                        </div>
+                        <div class="text-center text-2xl text-gray-300">&#8595;</div>
+                        
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-center z-10 shadow-sm">
+                            <span class="block font-bold">2. Múltiples Áreas Transversales</span>
+                            <span class="text-xs text-gray-500">S<sub>c</sub>, S<sub>w</sub>, S<sub>tb</sub>, S<sub>sb</sub>, S<sub>b</sub></span>
+                        </div>
+                        <div class="text-center text-2xl text-gray-300">&#8595;</div>
+                        
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-center z-10 shadow-sm">
+                            <span class="block font-bold">3. Cálculo de Estado Ideal</span>
+                            <span class="text-xs text-gray-500">G<sub>c</sub> &rarr; Re<sub>ideal</sub> &rarr; h<sub>ideal</sub></span>
+                        </div>
+                        <div class="text-center text-2xl text-gray-300">&#8595;</div>
+                        
+                        <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg text-center z-10 shadow-sm border-l-4 border-[#FF5252]">
+                            <span class="block font-bold">4. Penalización Analítica</span>
+                            <span class="text-xs text-gray-500">Cálculo de J<sub>c</sub>, J<sub>l</sub>, J<sub>b</sub>, J<sub>s</sub>, J<sub>r</sub></span>
+                        </div>
+                        <div class="text-center text-2xl text-gray-300">&#8595;</div>
+
+                        <div class="bg-[#00BFA5] p-4 rounded-lg text-center z-10 shadow-md text-white">
+                            <span class="block font-bold text-lg">5. Ensamble de Coeficiente</span>
+                            <span class="text-sm font-mono block mt-1">h<sub>coraza</sub> = h<sub>ideal</sub> &middot; &prod; J<sub>i</sub></span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-[#263238] text-gray-400 pt-10 pb-6 mt-12">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="mb-8 text-left">
+                <h4 class="text-xs font-bold text-gray-300 mb-3 uppercase tracking-wider">Referencias Bibliográficas</h4>
+                <ol class="list-decimal list-inside text-[11px] text-gray-500 space-y-1">
+                    <li>T. L. Bergman, A. S. Lavine, F. P. Incropera, and D. P. DeWitt, <i>Fundamentals of Heat and Mass Transfer</i>, 7th ed. Hoboken, NJ, USA: John Wiley &amp; Sons, 2011.</li>
+                    <li>D. Q. Kern, <i>Process Heat Transfer</i>. New York, NY, USA: McGraw-Hill, 1950.</li>
+                    <li>R. Sinnott and G. Towler, <i>Chemical Engineering Design: Principles, Practice and Economics of Plant and Process Design</i>, 2nd ed. Oxford, UK: Butterworth-Heinemann, 2012.</li>
+                    <li>T. Tinker, "Shell Side Characteristics of Shell and Tube Heat Exchangers," in <i>General Discussion on Heat Transfer</i>, IMechE/ASME, 1951.</li>
+                </ol>
+            </div>
+            <div class="border-t border-gray-600 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
+                <p class="text-sm">&copy; 2026 Resumen Técnico de Intercambiadores de Calor.</p>
+                <p class="text-xs max-w-sm text-right">Basado en metodologías de Kern (1950) y fundamentos Bell-Delaware. Renderizado optimizado sin gráficos vectoriales escalables externos.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        Chart.defaults.font.family = "'Roboto', sans-serif";
+        Chart.defaults.color = "#455A64";
+
+        function wrapLabel(label) {
+            if (label.length <= 16) return label;
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = '';
+            for (let word of words) {
+                if ((currentLine + word).length > 16) {
+                    if (currentLine.length > 0) lines.push(currentLine.trim());
+                    currentLine = word + ' ';
+                } else {
+                    currentLine += word + ' ';
+                }
+            }
+            if (currentLine.trim().length > 0) lines.push(currentLine.trim());
+            return lines;
+        }
+
+        const tooltipConfig = {
+            tooltip: {
+                callbacks: {
+                    title: function(tooltipItems) {
+                        const item = tooltipItems[0];
+                        let label = item.chart.data.labels[item.dataIndex];
+                        if (Array.isArray(label)) {
+                            return label.join(' ');
+                        } else {
+                            return label;
+                        }
+                    }
+                }
+            }
+        };
+
+        const tinkerLabelsRaw = [
+            "Corriente B (Flujo Principal Ideal)",
+            "Corriente A (Fuga Tubo-Deflector)",
+            "Corriente E (Fuga Coraza-Deflector)",
+            "Corriente C (Derivación Haz-Coraza)",
+            "Corriente F (Derivación Partición)"
+        ];
+        
+        const tinkerLabelsWrapped = tinkerLabelsRaw.map(wrapLabel);
+
+        const ctxTinker = document.getElementById('tinkerChart').getContext('2d');
+        new Chart(ctxTinker, {
+            type: 'doughnut',
+            data: {
+                labels: tinkerLabelsWrapped,
+                datasets: [{
+                    data: [45, 15, 15, 15, 10],
+                    backgroundColor: [
+                        '#1A237E',
+                        '#FF5252',
+                        '#FF8A80',
+                        '#FFC107',
+                        '#FFE082'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    ...tooltipConfig,
+                    legend: {
+                        position: 'right',
+                        labels: { boxWidth: 12, padding: 15 }
+                    }
+                }
+            }
+        });
+
+        const radarLabelsRaw = [
+            "Jc (Corte del Deflector)",
+            "Jl (Fugas A y E)",
+            "Jb (Bypass C y F)",
+            "Js (Espaciado Boquillas)",
+            "Jr (Gradiente Laminar)"
+        ];
+        const radarLabelsWrapped = radarLabelsRaw.map(wrapLabel);
+
+        const ctxRadar = document.getElementById('radarChart').getContext('2d');
+        new Chart(ctxRadar, {
+            type: 'radar',
+            data: {
+                labels: radarLabelsWrapped,
+                datasets: [{
+                    label: 'Valores Típicos (0 a 1.0)',
+                    data: [1.0, 0.75, 0.85, 0.90, 1.0],
+                    backgroundColor: 'rgba(0, 191, 165, 0.3)',
+                    borderColor: '#00BFA5',
+                    pointBackgroundColor: '#FFC107',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#FFC107',
+                    borderWidth: 3,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255, 255, 255, 0.2)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.2)' },
+                        pointLabels: { color: '#ffffff', font: { size: 11, weight: 'bold' } },
+                        ticks: {
+                            color: '#ffffff',
+                            backdropColor: 'transparent',
+                            min: 0,
+                            max: 1,
+                            stepSize: 0.2
+                        }
+                    }
+                },
+                plugins: {
+                    ...tooltipConfig,
+                    legend: { display: false }
+                }
+            }
+        });
+
+        const compLabelsRaw = ["Variables Geométricas Requeridas", "Pasos de Cálculo Principales", "Factores de Corrección (Mult.)"];
+        const compLabelsWrapped = compLabelsRaw.map(wrapLabel);
+
+        const ctxComp = document.getElementById('complexityChart').getContext('2d');
+        new Chart(ctxComp, {
+            type: 'bar',
+            data: {
+                labels: compLabelsWrapped,
+                datasets: [
+                    {
+                        label: 'Método Kern',
+                        data: [4, 4, 0],
+                        backgroundColor: '#FFC107',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Método Bell-Delaware',
+                        data: [10, 7, 5],
+                        backgroundColor: '#00BFA5',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        title: { display: true, text: 'Cantidad' }
+                    },
+                    y: {
+                        grid: { borderDash: [4, 4] }
+                    }
+                },
+                plugins: {
+                    ...tooltipConfig,
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        const Re = [];
+        const Pr = [];
+        const Nu = [];
+        
+        for (let r = 10000; r <= 50000; r += 2000) {
+            Re.push(r);
+        }
+        for (let p = 0.6; p <= 10; p += 0.5) {
+            Pr.push(p);
+        }
+        
+        for (let i = 0; i < Pr.length; i++) {
+            let zRow = [];
+            for (let j = 0; j < Re.length; j++) {
+                let nu_val = 0.023 * Math.pow(Re[j], 0.8) * Math.pow(Pr[i], 0.4);
+                zRow.push(nu_val);
+            }
+            Nu.push(zRow);
+        }
+
+        const surfaceData = [{
+            z: Nu,
+            x: Re,
+            y: Pr,
+            type: 'surface',
+            colorscale: 'Viridis',
+            colorbar: { title: 'Nu', thickness: 15 }
+        }];
+
+        const surfaceLayout = {
+            margin: { l: 0, r: 0, b: 0, t: 0 },
+            scene: {
+                xaxis: { title: 'Reynolds (Re)' },
+                yaxis: { title: 'Prandtl (Pr)' },
+                zaxis: { title: 'Nusselt (Nu)' },
+                camera: { eye: { x: 1.5, y: -1.5, z: 1.2 } }
+            },
+            paper_bgcolor: 'transparent'
+        };
+
+        Plotly.newPlot('plotly-surface', surfaceData, surfaceLayout, {responsive: true, renderer: 'webgl'});
+
+    </script>
+</body>
+</html>
